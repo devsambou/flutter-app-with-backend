@@ -67,6 +67,20 @@ class AuthRepository implements AuthRepositoryInterface {
     }
   }
 
+  @override
+  Future<Session?> refreshSession() async {
+    try {
+      final response = await supabaseClient.auth.refreshSession();
+      return response.session;
+    } on AuthException catch (e) {
+      throw AuthExceptionApp(_mapAuthErrorMessage(e.message));
+    } catch (e) {
+      throw AuthExceptionApp(
+        'Erreur lors du renouvellement de la session : $e',
+      );
+    }
+  }
+
   String _mapAuthErrorMessage(String rawMessage) {
     final lower = rawMessage.toLowerCase();
     if (lower.contains('invalid login credentials') ||

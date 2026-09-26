@@ -52,11 +52,13 @@ lib/
 └── main.dart      # Initialisation et point d’entrée de l’application
 ```
 
-Le `MovieRepository` coordonne les sources distantes et locales. Il utilise TMDB lorsque la connexion est disponible, enregistre les réponses dans Hive et relit le cache lorsque le réseau ou le serveur sont indisponibles.
+Le `MovieRepository` coordonne les sources distantes et locales. Il utilise TMDB lorsque la connexion est disponible, enregistre les réponses dans Hive et relit le cache lorsque le réseau ou le serveur sont indisponibles. Chaque entrée est horodatée et considérée fraîche pendant 24 heures; une entrée expirée n'est pas servie comme donnée actuelle.
 
 ### Authentification et jetons
 
 Supabase Auth gère le JWT de session, son stockage sécurisé et son renouvellement via le refresh token. L’application observe `onAuthStateChange` et utilise la session courante pour protéger les routes, sans dupliquer la gestion cryptographique dans le code métier. Le client Dio TMDB injecte automatiquement le `TMDB_BEARER_TOKEN` dans l’en-tête `Authorization` lorsqu’il est configuré, sinon il utilise `TMDB_API_KEY` en paramètre de requête.
+
+Le repository expose également `refreshSession()`, qui délègue explicitement le renouvellement au client Supabase et retourne la nouvelle session. Le JWT Supabase n'est pas envoyé à TMDB : les deux services ont des jetons et des responsabilités distincts.
 
 ## Prérequis
 
@@ -122,13 +124,16 @@ La CI GitHub exécute automatiquement ces deux contrôles pour chaque push et pu
 
 ## Tests
 
-Les tests unitaires se trouvent dans `test/data/repositories/movie_repository_test.dart`. Ils couvrent notamment :
+Les tests unitaires se trouvent dans `test/` et couvrent notamment :
 
 - le chargement des films en ligne ;
 - l’écriture et la lecture du cache Hive ;
 - le fonctionnement hors-ligne ;
 - la gestion d’un cache vide ;
 - le chargement des détails et la recherche.
+- les erreurs TMDB et le fallback vers le cache ;
+- l'expiration du cache Hive ;
+- le chargement des détails hors ligne avec ou sans cache.
 
 ## API utilisées
 

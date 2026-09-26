@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../constants/app_colors.dart';
+import '../error/exceptions.dart';
 
 class AsyncValueWidget<T> extends StatelessWidget {
   final AsyncValue<T> value;
@@ -53,10 +54,7 @@ class AsyncValueWidget<T> extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                e
-                    .toString()
-                    .replaceAll('Exception: ', '')
-                    .replaceAll('ServerException: ', ''),
+                _userMessage(e),
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   color: AppColors.textSecondary,
@@ -83,5 +81,14 @@ class AsyncValueWidget<T> extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _userMessage(Object error) {
+    if (error is NetworkException) return error.message;
+    if (error is ServerException) return error.message;
+    if (error is CacheException) {
+      return 'Les données locales sont temporairement indisponibles.';
+    }
+    return 'Impossible de charger les données. Vérifiez votre connexion puis réessayez.';
   }
 }

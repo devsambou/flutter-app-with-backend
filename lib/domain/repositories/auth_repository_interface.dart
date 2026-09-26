@@ -27,4 +27,7 @@ abstract class AuthRepositoryInterface {
 
   /// Déconnexion de l'utilisateur
   Future<void> signOut();
+
+  /// Renouvelle explicitement la session JWT auprès de Supabase.
+  Future<Session?> refreshSession();
 }

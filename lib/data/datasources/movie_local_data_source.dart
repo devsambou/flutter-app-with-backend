@@ -16,20 +16,26 @@ abstract class MovieLocalDataSource {
 class MovieLocalDataSourceImpl implements MovieLocalDataSource {
   static const String trendingBoxName = 'trending_movies_cache';
   static const String detailsBoxName = 'movie_details_cache';
+  static const Duration defaultCacheTtl = Duration(hours: 24);
 
   final Box trendingBox;
   final Box detailsBox;
+  final Duration cacheTtl;
 
   MovieLocalDataSourceImpl({
     required this.trendingBox,
     required this.detailsBox,
+    this.cacheTtl = defaultCacheTtl,
   });
 
   @override
   Future<void> cacheTrendingMovies(List<Movie> movies, {int page = 1}) async {
     try {
       final jsonList = movies.map((m) => m.toJson()).toList();
-      await trendingBox.put('trending_page_$page', jsonList);
+      await trendingBox.put('trending_page_$page', {
+        'cachedAt': DateTime.now().toUtc().toIso8601String(),
+        'data': jsonList,
+      });
     } catch (e) {
       throw CacheException(
         'Impossible de mettre en cache les films populaires : $e',
@@ -40,11 +46,20 @@ class MovieLocalDataSourceImpl implements MovieLocalDataSource {
   @override
   Future<List<Movie>> getCachedTrendingMovies({int page = 1}) async {
     try {
-      final rawList = trendingBox.get('trending_page_$page');
-      if (rawList == null) {
+      final rawValue = trendingBox.get('trending_page_$page');
+      if (rawValue == null) {
         return [];
       }
-      final list = (rawList as List)
+      if (rawValue is! Map) {
+        return [];
+      }
+      final rawMap = Map<String, dynamic>.from(rawValue as Map);
+      final cachedAt = DateTime.tryParse(rawMap['cachedAt'] as String? ?? '');
+      if (cachedAt == null ||
+          DateTime.now().toUtc().difference(cachedAt) > cacheTtl) {
+        return [];
+      }
+      final list = (rawMap['data'] as List)
           .map((item) => Movie.fromJson(Map<String, dynamic>.from(item as Map)))
           .toList();
       return list;
@@ -58,7 +73,10 @@ class MovieLocalDataSourceImpl implements MovieLocalDataSource {
   @override
   Future<void> cacheMovieDetail(MovieDetail movieDetail) async {
     try {
-      await detailsBox.put(movieDetail.id, movieDetail.toJson());
+      await detailsBox.put(movieDetail.id, {
+        'cachedAt': DateTime.now().toUtc().toIso8601String(),
+        'data': movieDetail.toJson(),
+      });
     } catch (e) {
       throw CacheException(
         'Impossible de mettre en cache le film #${movieDetail.id} : $e',
@@ -69,10 +87,17 @@ class MovieLocalDataSourceImpl implements MovieLocalDataSource {
   @override
   Future<MovieDetail?> getCachedMovieDetail(int movieId) async {
     try {
-      final rawMap = detailsBox.get(movieId);
-      if (rawMap == null) return null;
+      final rawValue = detailsBox.get(movieId);
+      if (rawValue == null) return null;
+      if (rawValue is! Map) return null;
 
-      final map = Map<String, dynamic>.from(rawMap as Map);
+      final rawMap = Map<String, dynamic>.from(rawValue as Map);
+      final cachedAt = DateTime.tryParse(rawMap['cachedAt'] as String? ?? '');
+      if (cachedAt == null ||
+          DateTime.now().toUtc().difference(cachedAt) > cacheTtl) {
+        return null;
+      }
+      final map = Map<String, dynamic>.from(rawMap['data'] as Map);
       return MovieDetail.fromCacheJson(map);
     } catch (e) {
       throw CacheException(
