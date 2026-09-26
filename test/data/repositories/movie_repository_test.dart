@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:movie_vault/core/error/exceptions.dart';
 import 'package:movie_vault/core/network/network_info.dart';
 import 'package:movie_vault/data/datasources/movie_local_data_source.dart';
 import 'package:movie_vault/data/datasources/tmdb_remote_data_source.dart';
@@ -123,7 +122,7 @@ void main() {
     );
 
     test(
-      'doit lever NetworkException en mode hors-ligne si le cache est vide',
+      'doit retourner une liste vide en mode hors-ligne si le cache est vide',
       () async {
         // Arrange
         when(() => mockNetworkInfo.isConnected).thenAnswer((_) async => false);
@@ -131,11 +130,11 @@ void main() {
           () => mockLocalDataSource.getCachedTrendingMovies(page: 1),
         ).thenAnswer((_) async => []);
 
-        // Act & Assert
-        expect(
-          () => repository.getTrendingMovies(page: 1),
-          throwsA(isA<NetworkException>()),
-        );
+        // Act
+        final result = await repository.getTrendingMovies(page: 1);
+
+        // Assert
+        expect(result, isEmpty);
         verifyZeroInteractions(mockRemoteDataSource);
       },
     );

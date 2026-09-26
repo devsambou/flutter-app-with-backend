@@ -36,9 +36,9 @@ class MovieRepository implements MovieRepositoryInterface {
       if (cached.isNotEmpty) {
         return cached;
       }
-      throw const NetworkException(
-        'Mode hors-ligne : aucun film enregistré en cache local.',
-      );
+      // Une liste vide permet à l'écran d'afficher un état hors-ligne explicite
+      // sans masquer les données qui seraient déjà disponibles dans le cache.
+      return [];
     }
 
     try {
@@ -54,7 +54,7 @@ class MovieRepository implements MovieRepositoryInterface {
       if (cached.isNotEmpty) {
         return cached;
       }
-      rethrow;
+      return [];
     }
   }
 

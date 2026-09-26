@@ -35,7 +35,7 @@ L’application utilise une interface sombre adaptée à la consultation de cont
 2. L’écran principal charge les films populaires depuis TMDB.
 3. Les résultats et les détails récupérés sont enregistrés localement avec Hive.
 4. Une recherche permet de trouver un film par son titre.
-5. En cas de coupure réseau, l’application affiche un bandeau hors-ligne et utilise le cache disponible.
+5. En cas de coupure réseau, l’application affiche un bandeau hors-ligne et utilise le cache disponible. Si le cache est vide, l’écran affiche l’état « Aucun film disponible » plutôt qu’une erreur technique.
 6. La déconnexion invalide la session et renvoie vers l’écran de connexion.
 
 ## Architecture
@@ -53,6 +53,10 @@ lib/
 ```
 
 Le `MovieRepository` coordonne les sources distantes et locales. Il utilise TMDB lorsque la connexion est disponible, enregistre les réponses dans Hive et relit le cache lorsque le réseau ou le serveur sont indisponibles.
+
+### Authentification et jetons
+
+Supabase Auth gère le JWT de session, son stockage sécurisé et son renouvellement via le refresh token. L’application observe `onAuthStateChange` et utilise la session courante pour protéger les routes, sans dupliquer la gestion cryptographique dans le code métier. Le client Dio TMDB injecte automatiquement le `TMDB_BEARER_TOKEN` dans l’en-tête `Authorization` lorsqu’il est configuré, sinon il utilise `TMDB_API_KEY` en paramètre de requête.
 
 ## Prérequis
 
@@ -77,6 +81,8 @@ Créez un fichier `.env` à la racine du projet :
 SUPABASE_URL=https://votre-projet.supabase.co
 SUPABASE_ANON_KEY=votre_cle_anon_publique
 TMDB_API_KEY=votre_cle_api_tmdb_v3
+# Optionnel : token Read Access TMDB v4
+TMDB_BEARER_TOKEN=votre_token_bearer_tmdb
 ```
 
 Ne partagez jamais ce fichier avec vos clés réelles dans un dépôt public.
@@ -111,6 +117,8 @@ Pour vérifier le projet avant son lancement :
 flutter analyze
 flutter test
 ```
+
+La CI GitHub exécute automatiquement ces deux contrôles pour chaque push et pull request via `.github/workflows/ci.yml`.
 
 ## Tests
 
